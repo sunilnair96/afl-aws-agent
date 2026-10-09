@@ -1,0 +1,80 @@
+<!doctype html><html><head><meta charset="utf-8"><title>One agent, three builds: where does the user's identity live?</title>
+<style>
+@page{size:A4 landscape;margin:0}
+:root{--ink:#1b2a41;--navy:#0b2a55;--blue:#1f5fd0;--line:#3b6fb6;--bg:#f2f7fd;--pol:#7a4bc7;--polbg:#f6f0fd;--ok:#188038;--okbg:#eff9f1;--no:#d33;--nobg:#fdeeee;--mute:#44556f;--out:#fff6e6;--outl:#d98a00}
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;color:var(--ink);width:297mm;height:209mm;box-sizing:border-box;padding:8mm 11mm;background:#fff}
+h1{margin:0;font-size:21px;color:var(--navy)}
+.sub{margin:2px 0 5px;color:var(--mute);font-size:11.5px}
+.lane{border-radius:9px;padding:5px 8px 6px;margin-top:5px;border:1.5px solid var(--line);background:#fafcff}
+.lane h2{margin:0 0 4px;font-size:12px;color:var(--navy)}
+.lane.ok{border-color:var(--ok);background:var(--okbg)} .lane.ok h2{color:var(--ok)}
+.lane.bad{border-color:var(--no);background:var(--nobg)} .lane.bad h2{color:var(--no)}
+.flow{display:flex;align-items:stretch;gap:4px}
+.box{flex:1;border:1.5px solid var(--line);border-radius:7px;padding:4px 6px;background:var(--bg);font-size:9.2px;line-height:1.25}
+.box h3{margin:0 0 2px;font-size:10.5px;color:var(--navy)}
+.pol{border-color:var(--pol);background:var(--polbg)}
+.app{border-color:var(--outl);background:var(--out)}
+.arr{align-self:center;font-size:8.2px;text-align:center;width:46px;color:var(--blue)}
+.arr b{font-size:15px;display:block;line-height:1}
+.arr.x{color:var(--no)}
+code{background:#e7edf6;border-radius:3px;padding:0 3px;font-size:8.6px}
+.al{color:var(--ok);font-weight:700} .de{color:var(--no);font-weight:700}
+.row{display:flex;gap:8px;margin-top:6px}
+.res{flex:1.5;border:1.5px solid var(--line);border-radius:8px;padding:5px 8px;font-size:9.4px;background:#fff}
+.take{flex:1;border:1.5px solid var(--pol);background:var(--polbg);border-radius:8px;padding:5px 8px;font-size:9.4px}
+table{width:100%;border-collapse:collapse;font-size:9.2px} td,th{padding:2px 4px;text-align:left;border-bottom:1px solid #dde5f0;vertical-align:top}
+ul{margin:2px 0 0 14px;padding:0}
+.foot{margin-top:4px;font-size:8px;color:#667}
+.tag{display:inline-block;font-size:8.2px;border-radius:4px;padding:0 4px;margin-left:4px;border:1px solid var(--outl);color:#8a5a00;background:#fff}
+</style></head><body>
+<h1>One agent, three builds: where does the user's identity live?</h1>
+<div class="sub">Rule tested: user A may query any season; user B only 2025 onward. Enforced at the Gateway by a Cedar policy, not by the model.</div>
+
+<div class="lane ok"><h2>1 &mdash; Runtime: your agent code holds the token <span class="tag">you write the loop</span></h2>
+<div class="flow">
+ <div class="box"><h3>User</h3>Signs in (Cognito)</div><div class="arr"><b>&rarr;</b>JWT</div>
+ <div class="box"><h3>Runtime (your Strands code)</h3>JWT authorizer; <code>Authorization</code> header allow-listed; code forwards it</div><div class="arr"><b>&rarr;</b>user's JWT</div>
+ <div class="box pol"><h3>Gateway (JWT) + Cedar</h3>Validates the token, decides per user</div><div class="arr"><b>&rarr;</b>if allowed</div>
+ <div class="box"><h3>Lambda</h3>Gets <code>user_id</code> bound from the token</div>
+</div></div>
+
+<div class="lane bad"><h2>2 &mdash; Harness with a managed Gateway tool (IAM): the Gateway sees the harness, not the person <span class="tag">no code</span></h2>
+<div class="flow">
+ <div class="box"><h3>User / caller</h3><code>--user-id</code> is only a label</div><div class="arr"><b>&rarr;</b>IAM</div>
+ <div class="box"><h3>Harness (managed loop)</h3>Model + tools by config; runs inside a Runtime</div><div class="arr x"><b>&rarr;</b>harness role</div>
+ <div class="box pol"><h3>Gateway (IAM) + Cedar</h3>Sees one service role; cannot tell A from B</div><div class="arr"><b>&rarr;</b></div>
+ <div class="box"><h3>Lambda</h3>Same metadata for A and B</div>
+</div></div>
+
+<div class="lane ok"><h2>3 &mdash; Harness with inline tools + your client app: the app holds the token <span class="tag">harness loop, your app runs tools</span></h2>
+<div class="flow">
+ <div class="box"><h3>User</h3>Signs in (Cognito)</div><div class="arr"><b>&rarr;</b>JWT</div>
+ <div class="box app"><h3>Client app (outside Bedrock)</h3>Holds the user's token. Calls the harness with its own IAM credentials. Sets <code>user_id</code> from the token.</div><div class="arr"><b>&harr;</b><span>tool_use /<br>toolResult</span></div>
+ <div class="box"><h3>Harness (managed loop)</h3>Picks a tool, then <b>stops</b> and hands the call back. Keeps the conversation.</div>
+</div>
+<div class="flow" style="margin-top:3px">
+ <div class="box app" style="flex:1.3"><h3>App runs the tool</h3>Sends the call to the Gateway with <code>Authorization: Bearer &lt;user token&gt;</code></div><div class="arr"><b>&rarr;</b>user's JWT</div>
+ <div class="box pol"><h3>Gateway (JWT) + Cedar</h3>Decides per user</div><div class="arr"><b>&rarr;</b>if allowed</div>
+ <div class="box"><h3>Lambda</h3>Gets <code>user_id</code> from the token</div>
+</div></div>
+
+<div class="row">
+ <div class="res"><b>Observed (same question, same model)</b>
+ <table>
+ <tr><th>Test</th><th>1 Runtime</th><th>2 Harness + IAM gateway</th><th>3 Harness + client app</th></tr>
+ <tr><td>B asks for 2023</td><td class="de">denied</td><td class="al">answered in full</td><td class="de">denied</td></tr>
+ <tr><td>B asks for 2025</td><td class="al">allowed</td><td class="al">allowed</td><td class="al">allowed</td></tr>
+ <tr><td>Lambda sees the caller</td><td>user id</td><td>no (A = B)</td><td>user id</td></tr>
+ <tr><td>Agent code written</td><td><code>main.py</code> + deps</td><td>none</td><td>app code, no agent packaging</td></tr>
+ <tr><td>Console playground</td><td>n/a</td><td>works</td><td>stops at the tool call</td></tr>
+ </table></div>
+ <div class="take"><b>Takeaways</b><ul>
+  <li>The Gateway decides; <b>your code makes the decision apply to the right person</b>.</li>
+  <li>I found no harness option to forward the user's token (absence in what I read and tried, not proof).</li>
+  <li>The harness kept the conversation; the app sent only the new message on the same session.</li>
+  <li>A model refusing an injection is luck. The control is a tool with no user-id parameter.</li>
+  <li>A denial is HTTP 200 with an <code>error</code> in the body.</li>
+ </ul></div>
+</div>
+<div class="foot">Comparison page: AWS docs, "AgentCore harness vs. Runtime". Learning prototype in a personal AWS account, built while learning with Claude (Claude desktop app). No client or proprietary data. Observed October 2026; the working rule is the author's reading of the evidence, not an AWS statement.</div>
+</body></html>

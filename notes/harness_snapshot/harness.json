@@ -1,0 +1,40 @@
+{
+  "name": "teamHarness",
+  "model": {
+    "provider": "bedrock",
+    "modelId": "global.anthropic.claude-sonnet-4-6"
+  },
+  "tools": [
+    {
+      "type": "agentcore_gateway",
+      "name": "AFLGatewayJWT",
+      "config": {
+        "agentCoreGateway": {
+          "gatewayArn": "arn:aws:bedrock-agentcore:ap-southeast-2:<ACCOUNT_ID>:gateway/aflstartingteamagent-aflgatewayjwt-<JWT_GATEWAY_SUFFIX>",
+          "outboundAuth": {
+            "oauth": {
+              "providerArn": "arn:aws:bedrock-agentcore:ap-southeast-2:<ACCOUNT_ID>:token-vault/default/oauth2credentialprovider/AFLUserOAuth",
+              "scopes": ["openid", "email", "phone"],
+              "grantType": "USER_FEDERATION",
+              "defaultReturnUrl": "http://localhost:8080"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "skills": [],
+  "memory": {
+    "mode": "managed"
+  },
+  "authorizerType": "CUSTOM_JWT",
+  "authorizerConfiguration": {
+    "customJwtAuthorizer": {
+      "discoveryUrl": "https://cognito-idp.ap-southeast-2.amazonaws.com/<USER_POOL_ID>/.well-known/openid-configuration",
+      "allowedClients": ["<CONF_CLIENT_ID>"]
+    }
+  },
+  "maxIterations": 10,
+  "maxTokens": 4096,
+  "timeoutSeconds": 300
+}

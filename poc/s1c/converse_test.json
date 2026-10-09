@@ -1,0 +1,7 @@
+{
+  "modelId": "au.anthropic.claude-haiku-4-5-20251001-v1:0",
+  "messages": [
+    { "role": "user", "content": [ { "text": "Reply with the single word OK." } ] }
+  ],
+  "inferenceConfig": { "maxTokens": 10 }
+}

@@ -1,0 +1,46 @@
+Authenticated is not the same as authorized. And with an AI agent there is a third party in the middle: the model.
+
+In my previous post, I showed an agent reaching enterprise data through explicit, permissioned tools (AgentCore Gateway -> Lambda -> Athena). The next question: whose identity is the agent acting on, and what is that user allowed to do?
+
+The design I built:
+User -> Amazon Cognito (JWT) -> agent -> AgentCore Gateway -> Cedar policy -> Lambda
+
+Example rule: a user may only query records from 2025 onward. It is an external policy on an input the tool takes (a year), evaluated by the Gateway before the tool runs. 
+Not in the system prompt (a probabilistic model shouldn't enforce a deterministic rule), and not only in the Lambda (the request would already have reached my code).
+
+The surprise was the hop between the agent and the Gateway.
+
+Calling the Gateway directly with the user's token worked from day one. 
+With a managed AgentCore harness in the path, it failed at tool load: "You must provide a ResourceOauth2ReturnUrl", even with a default return URL configured. 
+My user and identity provider were the same, so I didn't need a second OAuth flow. I needed to pass the original token along. (My reading of the error, not a confirmed root cause.)
+
+What worked: an AgentCore Runtime agent.
+- The Runtime has a JWT authorizer for the Cognito token.
+- The Authorization header is allow-listed, so it reaches the agent code.
+- The code forwards the same header to the Gateway.
+- The Gateway validates it and Cedar decides.
+
+Same user, same tool:
+- Year 2025: allowed, data returned.
+- Year 2023: denied by policy ("denied by default").
+- CloudWatch showed the Lambda ran for the allowed call and not for the denied one.
+
+How I tested, if you want to copy it:
+- One layer at a time, bottom up: token, Gateway, policy, Lambda, then the agent.
+- A written prediction before every run. I learned most when I was wrong.
+- The denial path as well as the success path.
+- To prove token forwarding, an agent with no model that only echoes what it receives. Almost free.
+
+Lessons that cost me time:
+- A denial came back as HTTP 200, with the refusal in the JSON body. Check the body, not the status.
+- Access tokens carry less than you expect. Mine had no email or name, so the policy saw only an opaque user id.
+- Default deny does the work: one permit with a condition was enough.
+- AgentCore CLI 0.31.1 installs dependencies from pyproject.toml, not requirements.txt, and the Runtime needs the OpenTelemetry package.
+
+Next post: groups instead of per-user rules, and what the tool itself can know about the caller (less than I expected).
+
+If you are learning agents on AWS, what would you test first?
+
+Learning prototype in my personal AWS account. No client or proprietary data.
+
+#AgenticAI #AWS #AmazonBedrock #AgentCore #Cedar #AISecurity

@@ -1,0 +1,22 @@
+# secrets / local state
+.env
+.env.*
+*.pem
+*token*
+AwsCommands.txt
+
+# python / node
+__pycache__/
+.venv/
+node_modules/
+cdk.out/
+
+# data stays out of git
+*.parquet
+*.csv
+
+# Office temp/lock files (created while a document is open in Word)
+~$*
+
+# editor backups
+*.bak

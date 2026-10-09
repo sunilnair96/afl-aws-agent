@@ -1,0 +1,76 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Passing the user's identity from an agent to a gateway</title>
+<style>
+@page{size:A4 landscape;margin:0}
+:root{--ink:#1b2a41;--navy:#0b2a55;--blue:#1f5fd0;--line:#3b6fb6;--bg:#f2f7fd;--pol:#7a4bc7;--polbg:#f6f0fd;--ok:#188038;--okbg:#eff9f1;--no:#d33;--nobg:#fdeeee;--mute:#44556f}
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;color:var(--ink);width:297mm;height:209mm;box-sizing:border-box;padding:9mm 12mm;background:#fff}
+h1{margin:0;font-size:23px;color:var(--navy)}
+.sub{margin:2px 0 8px;color:var(--mute);font-size:12.5px}
+.lane{border-radius:9px;padding:6px 8px 8px;margin-top:7px}
+.lane h2{margin:0 0 5px;font-size:13px}
+.a{background:var(--nobg);border:1.5px solid var(--no)} .a h2{color:var(--no)}
+.b{background:var(--okbg);border:1.5px solid var(--ok)} .b h2{color:var(--ok)}
+.flow{display:flex;align-items:stretch;gap:5px}
+.box{flex:1;border:1.5px solid var(--line);border-radius:7px;padding:6px 7px;background:var(--bg);font-size:10px;line-height:1.3}
+.box h3{margin:0 0 3px;font-size:11.5px;color:var(--navy)}
+.pol{border-color:var(--pol);background:var(--polbg)}
+.bad{border-color:var(--no);background:#fff}
+.num{display:inline-block;background:var(--blue);color:#fff;border-radius:50%;width:16px;height:16px;text-align:center;line-height:16px;font-size:9.5px;margin-right:3px}
+.arr{align-self:center;font-size:9px;text-align:center;width:44px;color:var(--blue)}
+.arr b{font-size:17px;display:block;line-height:1}
+.x{color:var(--no)} .arr.x{color:var(--no)}
+code{background:#e7edf6;border-radius:3px;padding:0 3px;font-size:9.2px}
+.row{display:flex;gap:8px;margin-top:8px}
+.res{flex:1.25;border:1.5px solid var(--line);border-radius:8px;padding:7px 9px;font-size:10px;background:#fff}
+.take{flex:1;border:1.5px solid var(--pol);background:var(--polbg);border-radius:8px;padding:7px 9px;font-size:10px}
+table{width:100%;border-collapse:collapse;font-size:9.8px} td,th{padding:2.5px 4px;text-align:left;border-bottom:1px solid #dde5f0;vertical-align:top}
+.al{color:var(--ok);font-weight:700} .de{color:var(--no);font-weight:700}
+ul{margin:3px 0 0 14px;padding:0}
+.foot{margin-top:5px;font-size:8.3px;color:#667}
+</style></head><body>
+<h1>Passing the user's identity from an agent to a gateway</h1>
+<div class="sub">Same user, same tool, same policy. The only difference between failing and working was how the agent obtained the token it presented to the Gateway.</div>
+
+<div class="lane a"><h2>Path A &mdash; managed harness: failed at the agent &rarr; Gateway hop</h2>
+<div class="flow">
+ <div class="box"><h3><span class="num">1</span>User</h3>Signs in (OAuth 2.0 / OIDC)</div>
+ <div class="arr"><b>&rarr;</b>sign in</div>
+ <div class="box"><h3><span class="num">2</span>Amazon Cognito</h3>Issues a JWT access token</div>
+ <div class="arr"><b>&rarr;</b>JWT</div>
+ <div class="box"><h3><span class="num">3</span>Harness</h3>Accepts the user's JWT (inbound). Calling the Gateway uses a <i>separate outbound OAuth step</i> (user federation).</div>
+ <div class="arr x"><b>&#10007;</b>error</div>
+ <div class="box bad"><h3 class="x">Outbound OAuth step</h3>Failed: <code>You must provide a ResourceOauth2ReturnUrl</code>. Tool never loaded; Gateway never called.</div>
+</div></div>
+
+<div class="lane b"><h2>Path B &mdash; Runtime agent that forwards the user's token: worked</h2>
+<div class="flow">
+ <div class="box"><h3><span class="num">1</span>User</h3>Signs in</div>
+ <div class="arr"><b>&rarr;</b>sign in</div>
+ <div class="box"><h3><span class="num">2</span>Amazon Cognito</h3>JWT access token<br><code>sub</code> <code>client_id</code> <code>scope</code></div>
+ <div class="arr"><b>&rarr;</b>Bearer JWT</div>
+ <div class="box"><h3><span class="num">3</span>AgentCore Runtime</h3>Validates the JWT (<code>CUSTOM_JWT</code>). <code>Authorization</code> is <b>allow-listed</b>, so the agent code can read it.</div>
+ <div class="arr"><b>&rarr;</b>same JWT</div>
+ <div class="box"><h3><span class="num">4</span>AgentCore Gateway</h3>Forwarded header, unchanged. Validates the JWT, then asks the policy engine.</div>
+ <div class="arr"><b>&rArr;</b>evaluate</div>
+ <div class="box pol"><h3><span class="num">5</span>Cedar policy</h3>Caller + tool + input <code>season</code>. No matching permit = deny.</div>
+ <div class="arr"><b>&rarr;</b>allow</div>
+ <div class="box"><h3><span class="num">6</span>AWS Lambda</h3>Runs only when allowed.</div>
+</div></div>
+
+<div class="row">
+ <div class="res"><b>Observed results (Path B, same user)</b>
+ <table>
+ <tr><th>Call</th><th>Result</th></tr>
+ <tr><td>Season 2025</td><td class="al">ALLOW &mdash; statistics returned</td></tr>
+ <tr><td>Season 2023</td><td><span class="de">DENY</span> &mdash; JSON-RPC <code>-32002</code>, "denied by default", <b>HTTP 200</b></td></tr>
+ <tr><td>Lambda log</td><td>One invocation: the allowed call only</td></tr>
+ <tr><td>Access token</td><td>Had <code>sub</code>, <code>client_id</code>, <code>scope</code>; no groups, no name</td></tr>
+ </table></div>
+ <div class="take"><b>Takeaways</b><ul>
+  <li>Authentication (Cognito) and authorization (Cedar) are separate controls.</li>
+  <li>If the user and identity provider are the same, forward the token; don't fetch a second one.</li>
+  <li>Check the response <b>body</b> for a denial, not the HTTP status.</li>
+  <li>The rule stays outside the model and outside the tool code.</li>
+  <li>CodeZip builds read <code>pyproject.toml</code>, not <code>requirements.txt</code>.</li></ul></div>
+</div>
+<div class="foot">Learning prototype in a personal AWS account. No client or proprietary data. Values shown are as observed on 8 Oct 2026; the explanation for why the harness path fails is the author's reading of the error, not a confirmed root cause.</div>
+</body></html>

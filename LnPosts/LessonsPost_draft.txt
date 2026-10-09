@@ -1,0 +1,28 @@
+I assumed the hard part of securing an AI agent would be the model. It was the plumbing around it.
+
+Last time I showed an agent passing a user's token to a gateway, with a policy deciding access. Two follow-up questions: how does this scale past one user, and what does the tool itself know about the caller?
+
+I tested both, learning with Claude (Claude desktop app) as my guide. It explained each step and wrote the test scripts. I ran every command and checked every result.
+
+What I learned:
+
+1. Use groups, not per-user rules. A policy can read the user's group from the token, so one rule covers everyone in it. I added a user to a group, got a fresh token, and their access changed with no policy change.
+
+2. A token is a snapshot. Group changes appear only in new tokens, so removing access isn't instant. The old token works until it expires (about an hour here).
+
+3. The tool can't see the user. My Lambda received only the tool arguments and gateway metadata. A forged user_id arrived unchanged.
+
+4. Bind identity to the token. Code, not the model, adds the user id, and a policy requires it to equal the token's subject. A forged id is refused before the Lambda runs.
+
+5. Permits add up. A strict rule next to a broad one changes nothing until you remove the broad one.
+
+6. A model refusing is not a control. I ran 7 hostile prompts with 0 violations. In one case the model simply declined, which proves nothing about the policy. The case that counted: the model tried to use another user's id, and the policy denied it.
+
+7. Browsers can't keep secrets. My test page signs in with a public client and PKCE. Two traps: a Cognito client created from the CLI had no login page until I added a branding style, and a valid token was still refused because its client wasn't on the allow-list.
+
+Limits: one small model, seven prompts, localhost only. This shows the design held against these tests, not that it is secure in general. My tests also caught wrong assumptions, mine and Claude's.
+
+
+Learning prototype in my personal AWS account. No client or proprietary data.
+
+#AgenticAI #AWS #AmazonBedrock #AgentCore #Cedar #AISecurity

@@ -1,0 +1,36 @@
+AWS has a page that compares an AgentCore harness with an AgentCore Runtime. It is a good table. I wanted to see what it means for one concrete rule, so I built the same agent three ways and tested it.
+
+The rule: user A may query any season, user B only 2025 onward. It is enforced by the Gateway (Cedar policy), not by the model and not by my prompt.
+
+What the page says, as I read it:
+- A harness is a managed agent loop, set up by configuration. It runs inside a Runtime.
+- On a Runtime you write the loop yourself.
+- Inline / client-side tools: you write the code.
+
+What I observed:
+
+1. Harness with a Gateway tool (IAM auth): the same question, the same answer as my Runtime agent, with zero agent code. But user B asked for 2023 and got the full answer. The Gateway saw the harness's service role, not the person. `--user-id` was just a label.
+
+2. The tool Lambda received the same caller metadata for user A and user B. Nothing identified the person.
+
+3. Runtime agent that forwards the user's token: user B denied for 2023, allowed for 2025.
+
+4. Harness with inline tools plus a small client app: the harness decides which tool to call and stops; my app runs the tool on the Gateway with the user's own token, then hands the result back. Same outcome as the Runtime: B denied for 2023, allowed for 2025, and each user's id came from their token, not from the model.
+
+So the finding that was not obvious from the table: the harness keeps the model loop, but who the user is has to be carried by your own code. The Gateway makes the decision; the app makes it apply to the right person. I found no harness option to forward the user's token. That is absence in what I read and tried, not proof.
+
+Smaller observations:
+- The harness kept the conversation. My app sent only the new message on the same session id.
+- The console playground stops at the tool call for inline tools, because the caller has to run them.
+- CloudWatch shows the handoff as two traces: the model's tool decision, then the follow-up with the tool result. The spans are named after Strands, and the resource is a Runtime.
+- A denial came back as HTTP 200 with the refusal in the JSON body.
+- A model declining a prompt injection is luck. What held was a tool schema with no user id and an app that sets it from the token.
+- The saving from the harness was packaging and plumbing (no dependency file, no agent code), not fewer lines overall.
+
+My working rule, which I may revise: standard tools and no per-user rule at the data, a harness is quick. When the rule must reach the data, use a Runtime, or a harness plus your own client.
+
+Diagram attached. I am learning AgentCore with Claude (Claude desktop app) in a personal AWS account. Prototype, no client or proprietary data.
+
+What would you test first?
+
+#AgenticAI #AWS #AmazonBedrock #AgentCore #AISecurity #Cedar

@@ -1,0 +1,45 @@
+DRAFT - replaces the unpublished "Post 2" files in Resume/LinkedINPosts/Post2. Not published.
+Every result below was observed in my account on 8 Oct 2026. Edit freely; remove anything you would not stand behind.
+Attach: architecture_post3.pdf (print poc/architecture_post3.html to PDF).
+Before posting: re-check the claims marked [verify at post time] and confirm Post 1 is the post it refers to.
+
+----------------------------------------------------------------
+
+In my previous post, I shared how an AI agent can reach enterprise data through explicit, permissioned tools (AgentCore Gateway -> Lambda -> Athena).
+
+The next question was: whose identity is the agent acting on, and what is that user allowed to access?
+
+Authentication alone isn't enough. Two users can both be authenticated and still need different access to the same tool.
+
+The design I built:
+User -> Amazon Cognito (JWT) -> agent -> AgentCore Gateway -> Cedar policy -> Lambda
+
+Example rule: this user may only query seasons from 2025 onward. The rule lives in an external policy, evaluated by the Gateway before the tool runs - not in the system prompt (a probabilistic model shouldn't enforce a deterministic rule) and not only inside the Lambda (the request would already have reached application code).
+
+The part that surprised me was the hop between the agent and the Gateway.
+
+Calling the Gateway directly with the user's token worked from day one. When I put a managed AgentCore harness in the path, it failed: its outbound OAuth step asked for a return URL. My user and my identity provider were the same, so I didn't need a second OAuth flow. I needed to pass the original token along.
+
+What worked: an AgentCore Runtime agent.
+- The Runtime validates the user's Cognito JWT on the way in.
+- The Authorization header is allow-listed, so it reaches the agent code.
+- The code forwards the same header to the Gateway.
+- The Gateway validates it and Cedar decides.
+
+Results for the same user and the same tool:
+- Season 2025: allowed, data returned.
+- Season 2023: denied by policy ("denied by default").
+- The Lambda log showed one invocation, for the allowed call only.
+
+Small lessons that cost me time:
+- A denial came back as HTTP 200, with the refusal inside the JSON body. Check the body, not the status.
+- My Cognito access token had no groups or name claim, so the policy could only see the user id.
+- Default deny does the work: one permit with a condition was enough.
+- Validate in LOG_ONLY before ENFORCE. [verify at post time: re-run once so this is fresh evidence]
+- CodeZip builds install dependencies from pyproject.toml, not requirements.txt, and the Runtime needs the OpenTelemetry package or creation fails.
+
+Next: group-based rules instead of one rule per user, and checking what the tool itself actually knows about the caller.
+
+Learning prototype built in my personal AWS account. No client or proprietary data is included.
+
+#GenerativeAI #AgenticAI #AWS #AmazonBedrock #AgentCore #Cedar #AISecurity #Authorization #CloudArchitecture
