@@ -1,0 +1,90 @@
+<!doctype html><html><head><meta charset="utf-8"><title>AFL Fantasy Assistant on AWS: solution architecture</title>
+<style>
+@page{size:A4 landscape;margin:0}
+:root{--ink:#1b2a41;--navy:#0b2a55;--blue:#1f5fd0;--line:#3b6fb6;--bg:#f2f7fd;--pol:#7a4bc7;--polbg:#f6f0fd;--ok:#188038;--okbg:#eff9f1;--amb:#d98a00;--ambbg:#fff6e6;--mute:#44556f;--gry:#eef1f5}
+*{box-sizing:border-box}
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;color:var(--ink);width:297mm;height:209mm;padding:7mm 10mm;background:#fff}
+h1{margin:0;font-size:21.0px;color:var(--navy)}
+.sub{margin:1px 0 5px;color:var(--mute);font-size:13.2px}
+.cols{display:flex;gap:6px;align-items:stretch}
+.col{border-radius:9px;padding:5px 6px 6px;border:1.5px solid var(--line);background:#fafcff;display:flex;flex-direction:column;gap:6px}
+.col h2{margin:0;font-size:12.6px;color:var(--navy);text-transform:uppercase;letter-spacing:.3px}
+.col.users{flex:.8} .col.sec{flex:1.05;border-color:var(--pol);background:var(--polbg)} .col.sec h2{color:var(--pol)}
+.col.agent{flex:1.1} .col.tools{flex:1.35} .col.data{flex:1.25;border-color:var(--ok);background:var(--okbg)} .col.data h2{color:var(--ok)}
+.box{border:1.3px solid var(--line);border-radius:6px;padding:3px 5px;background:#fff;font-size:10.6px;line-height:1.25}
+.box b{display:block;font-size:11.5px;color:var(--navy)}
+.pol{border-color:var(--pol)} .ok{border-color:var(--ok)} .amb{border-color:var(--amb);background:var(--ambbg)}
+.arrow{align-self:center;color:var(--blue);font-size:19.2px;font-weight:700}
+.dev{margin-top:8px;border:1.5px dashed var(--amb);background:var(--ambbg);border-radius:9px;padding:4px 7px;display:flex;gap:8px;align-items:center}
+.dev h2{margin:0;font-size:12.6px;color:#8a5a00;text-transform:uppercase;white-space:nowrap}
+.dev .box{flex:1}
+.life{margin-top:8px;display:flex;gap:0;align-items:stretch}
+.step{flex:1;background:var(--navy);color:#fff;font-size:10.8px;padding:4px 6px 4px 12px;position:relative;line-height:1.2;clip-path:polygon(0 0,calc(100% - 9px) 0,100% 50%,calc(100% - 9px) 100%,0 100%,9px 50%)}
+.step:first-child{clip-path:polygon(0 0,calc(100% - 9px) 0,100% 50%,calc(100% - 9px) 100%,0 100%)}
+.step b{display:block;font-size:11.5px}
+.step.lock{background:#b3261e}
+.bottom{margin-top:8px;display:flex;gap:6px}
+.card{flex:1;border:1.5px solid var(--line);border-radius:8px;padding:4px 7px;font-size:10.6px;background:#fff;line-height:1.3}
+.card h3{margin:0 0 2px;font-size:12.0px;color:var(--navy)}
+.card ul{margin:0 0 0 12px;padding:0}
+code{background:#e7edf6;border-radius:3px;padding:0 3px;font-size:9.8px}
+.foot{margin-top:3px;font-size:9.1px;color:#667}
+</style></head><body>
+<h1>AFL Fantasy Assistant on AWS: solution architecture</h1>
+<div class="sub">Helps each coach build a starting squad, keep versions as news arrives, lock it for round 1, then get weekly trade advice and plan a draft. Every coach sees only their own data.</div>
+
+<div class="cols">
+ <div class="col users"><h2>1. Coaches</h2>
+  <div class="box"><b>Coach A / Coach B</b>Web app in the browser (React). Sign in, build squads, ask questions, review advice.</div>
+  <div class="box"><b>Their choices</b>Squad versions, age cap, avoid list, premium locks, league settings, injury or doubt notes.</div>
+ </div>
+ <div class="arrow">&rarr;</div>
+ <div class="col sec"><h2>2. Identity and access</h2>
+  <div class="box pol"><b>Amazon Cognito</b>Sign-in. Issues a signed token that says who the coach is.</div>
+  <div class="box pol"><b>AgentCore Gateway + Cedar policy</b>Checks the token on every tool call. Default deny. Rules sit outside the AI model.</div>
+ </div>
+ <div class="arrow">&rarr;</div>
+ <div class="col agent"><h2>3. Assistant</h2>
+  <div class="box"><b>AgentCore Runtime (agent)</b>Understands the question, picks tools, explains results in plain language. Uses a foundation model on Amazon Bedrock.</div>
+  <div class="box"><b>What it never does</b>Decide access, change projections, or execute trades. The coach decides.</div>
+ </div>
+ <div class="arrow">&rarr;</div>
+ <div class="col tools"><h2>4. Tools (AWS Lambda)</h2>
+  <div class="box ok"><b>Squad builder + versions</b>Optimiser under the salary cap, locks and avoid list. Named versions. Locks at round 1.</div>
+  <div class="box ok"><b>Weekly trade advisor</b>Trade options within the round limit, with the numbers behind each.</div>
+  <div class="box ok"><b>Draft planner</b>Rankings by position scaled to league size; pick plan.</div>
+  <div class="box ok"><b>Projections, preferences, expert views</b>Stored deterministic projections; the coach's rules; expert opinion with source and date.</div>
+ </div>
+ <div class="arrow">&rarr;</div>
+ <div class="col data"><h2>5. Data</h2>
+  <div class="box ok"><b>Amazon S3 data lake (existing)</b>Player stats, 2026 player list, identity table. Catalogued by AWS Glue, queryable with Athena.</div>
+  <div class="box ok"><b>Projections and lineups (new)</b>Per-round predictions, fixtures, lineups, prices.</div>
+  <div class="box ok"><b>DynamoDB (new)</b>Each coach's squads, versions, preferences, leagues.</div>
+  <div class="box ok"><b>Expert knowledge (new)</b>Summaries of expert emails, searchable.</div>
+ </div>
+</div>
+
+<div class="dev"><h2>Developer side (own machine)</h2>
+ <div class="box"><b>Existing local app</b>Scrapes fixtures, lineups, prices; trains and runs the projection models.</div>
+ <div class="arrow">&rarr;</div>
+ <div class="box"><b>Loader</b>Copies the results into S3 after each round.</div>
+ <div class="arrow">&rarr;</div>
+ <div class="box"><b>Email intake</b>Reads expert emails from the developer's own Gmail; uploads summaries only.</div>
+</div>
+
+<div class="life">
+ <div class="step"><b>Pre-season</b>Build squad; keep versions as news arrives</div>
+ <div class="step"><b>Round 0</b>Actual scores feed the next build</div>
+ <div class="step"><b>Lineup announced</b>Named players update the squad</div>
+ <div class="step lock"><b>Round 1: squad locks</b>Build mode becomes read-only</div>
+ <div class="step"><b>Every week</b>Trade advice only; injuries, form, role changes, news</div>
+</div>
+
+<div class="bottom">
+ <div class="card"><h3>Security</h3><ul><li>Coach A cannot read Coach B's squads or preferences</li><li>The coach's identity comes from the token, never from the AI</li><li>No passwords or keys in code or notes</li></ul></div>
+ <div class="card"><h3>Trust</h3><ul><li>Projections are fixed numbers read from storage, the same every time</li><li>The AI explains; it does not change the numbers</li><li>Expert views are shown with source and date, beside the numbers</li></ul></div>
+ <div class="card"><h3>Cost</h3><ul><li>Runs inside the free-tier account and credits (about $158 on 2026-10-10)</li><li>Budget alarm before first use</li><li>Cost measured after the build, by service and by use (counts of calls)</li></ul></div>
+ <div class="card"><h3>Not in this version</h3><ul><li>Keeper and Dynasty drafts</li><li>Logging in to the games or making trades</li><li>Daily fantasy (DFS)</li></ul></div>
+</div>
+<div class="foot">Draft v0.1 for discussion. Learning project in a personal AWS account, built with Claude (Claude desktop app). The data layer was checked against the S3, Glue and Lambda listings on 2026-10-10 (one bucket, 7.6 MiB; 3 Glue crawlers, no Glue jobs; data for projections, lineups and per-user state is not in AWS yet). Final app runs on the owner's machine; this AWS version is for learning and cost measurement.</div>
+</body></html>
