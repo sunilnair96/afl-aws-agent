@@ -8,6 +8,7 @@ ever touching the data directly. Secondary goal: build real expertise in Bedrock
 
 | File | What it is |
 |---|---|
+| [RESUME_HERE.md](RESUME_HERE.md) | **Start here when resuming (written 2026-10-11):** status, where everything is and what is pushed, what was built and learned, how to restart, next steps in order, open questions |
 | [01_PLAN.md](01_PLAN.md) | Goals, principles, phases, timeline, decisions, risks, open questions |
 | [02_ARCHITECTURE.md](02_ARCHITECTURE.md) | Architecture narrative, request flows, authorization model, diagrams (Mermaid) |
 | [architecture_v0.1.svg](architecture_v0.1.svg) | Standalone architecture diagram (open in a browser) |
@@ -21,6 +22,7 @@ ever touching the data directly. Secondary goal: build real expertise in Bedrock
 | [notes/01_CONCEPTS.md](notes/01_CONCEPTS.md) | **Study notes, read in order:** concepts and where each lives in your project |
 | [notes/02_HOW_WE_TESTED.md](notes/02_HOW_WE_TESTED.md) | The testing method, the 11 experiments, and what I got wrong |
 | [notes/03_KEY_LESSONS_AND_READING.md](notes/03_KEY_LESSONS_AND_READING.md) | Ten lessons, self-test questions, exercises, reading list with links |
+| [notes/08_SAGEMAKER_NOTES.md](notes/08_SAGEMAKER_NOTES.md) | SageMaker notes: what it is, what would run there, what is required, will the result differ (same code and versions: same; built-in algorithms: different by design), options, parity test plan, cost and free-tier facts with sources |
 | [notes/07_HARNESS_EXPERIMENT_PLAN.md](notes/07_HARNESS_EXPERIMENT_PLAN.md) | Planned (not run): rebuild the same function with a harness, measure time/effort/visibility/access control; what AWS docs say about harness → Gateway auth |
 | [notes/06_ENVIRONMENTS_AND_DEPLOYMENT.md](notes/06_ENVIRONMENTS_AND_DEPLOYMENT.md) | DEV→PRD with AgentCore targets: what we tried, 12 findings, the target pipeline and per-environment config, my mistakes, open tests |
 | [notes/05_WEB_LOGIN_AND_PKCE.md](notes/05_WEB_LOGIN_AND_PKCE.md) | The browser test page: public client, PKCE in plain words, the four traps hit, commands to recreate/remove, results |
