@@ -153,6 +153,8 @@ Worked examples: **Rowan Marshall** to Geelong: `Adjust_Type` add points, `Adjus
 | 4. Evidence columns | Games at or above two thresholds over the last 3 seasons (AF 100/120; SC 110/130 assumed); draft profile for players with no AFL games | **Done 2026-10-10** (SC thresholds to confirm) |
 | 5. Next five rounds | Projected score and opponent for the next 5 rounds | Later: needs the 2027 fixture and the player list |
 
+**Update 2026-10-10 (later): own-list mode.** The owner asked to start a new list. The shortlist is now exactly the players with an attribute row (config `list_mode: manual`); the rules' output is a pool of candidates to add from; "Remove" deletes a row. Both lists start with Rowan Marshall, Tom Green, Connor Rozee and Nicholas Martin. The rules' saved files are never edited, so regenerating them cannot undo the list.
+
 Files to change in slices 2 to 4 (listed now, **nothing touched yet**):
 - Slice 2: `src/api/main.py` (new routes), `src/api/schemas.py` (new models), `src/common/player_compare.py` (`load_shortlist` merges the attributes), `tests/test_api.py` or a new API test file.
 - Slice 3: `frontend/src/api.ts` (types and calls), `frontend/src/pages/ShortlistPage.tsx` (columns, editing, filter), and its styles if needed.

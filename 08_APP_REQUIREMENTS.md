@@ -335,6 +335,7 @@ Keeper and Dynasty leagues; DFS; logging into AFL Fantasy or SuperCoach; executi
 | D15 | Band number = lowest edge of the band; one ladder for both games; each player has his own band per game (owner, 2026-10-10). |
 | D16 | Type stays rule-derived and unchanged; new **Tags** field is information only (D15 and FR33). |
 | D17 | Role, Band and Tags are stored per competition in `02_Data/masterData/shortlist_attributes_{season}_{AF|SC}.csv` (config `file_pattern`), separate from the include and exclude exceptions file. |
+| D18 | **The shortlist is the owner's own list** (2026-10-10): exactly the players with a Role/Band/Tags row, per competition; the rules' output is a pool of candidates; removing a player deletes his row (config `list_mode`). |
 
 ### 13b. Open: needs your answer
 
