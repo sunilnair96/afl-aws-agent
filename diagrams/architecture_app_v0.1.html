@@ -49,23 +49,25 @@ code{background:#e7edf6;border-radius:3px;padding:0 3px;font-size:9.8px}
   <div class="box"><b>What it never does</b>Decide access, change projections, or execute trades. The coach decides.</div>
  </div>
  <div class="arrow">&rarr;</div>
- <div class="col tools"><h2>4. Tools (AWS Lambda)</h2>
-  <div class="box ok"><b>Squad builder + versions</b>Optimiser under the salary cap, locks and avoid list. Named versions. Locks at round 1.</div>
+ <div class="col tools"><h2>4. Tools and engines (AWS)</h2>
+  <div class="box ok"><b>Projection engine (core)</b>Projects every player for AFL Fantasy and SuperCoach, applies the developer's overrides, keeps one file per season. Looks ahead 3 to 4 rounds once the fixture exists.</div>
+  <div class="box ok"><b>Shortlist</b>The 50 to 60 players of interest. Built before any squad.</div>
+  <div class="box ok"><b>Squad builder + versions</b>Optimiser on the shortlist plus the coach's locks, under the cap. Explains its choices. Named versions; locks at round 1.</div>
   <div class="box ok"><b>Weekly trade advisor</b>Trade options within the round limit, with the numbers behind each.</div>
   <div class="box ok"><b>Draft planner</b>Rankings by position scaled to league size; pick plan.</div>
-  <div class="box ok"><b>Projections, preferences, expert views</b>Stored deterministic projections; the coach's rules; expert opinion with source and date.</div>
+  <div class="box ok"><b>Projections, preferences, expert views</b>The coach's rules; expert opinion with source and date.</div>
  </div>
  <div class="arrow">&rarr;</div>
  <div class="col data"><h2>5. Data</h2>
   <div class="box ok"><b>Amazon S3 data lake (existing)</b>Player stats, 2026 player list, identity table. Catalogued by AWS Glue, queryable with Athena.</div>
-  <div class="box ok"><b>Projections and lineups (new)</b>Per-round predictions, fixtures, lineups, prices.</div>
+  <div class="box ok"><b>Projections and lineups (new)</b>One projection file per season, shortlists, fixtures, lineups, prices.</div>
   <div class="box ok"><b>DynamoDB (new)</b>Each coach's squads, versions, preferences, leagues.</div>
   <div class="box ok"><b>Expert knowledge (new)</b>Summaries of expert emails, searchable.</div>
  </div>
 </div>
 
 <div class="dev"><h2>Developer side (own machine)</h2>
- <div class="box"><b>Existing local app</b>Scrapes fixtures, lineups, prices; trains and runs the projection models.</div>
+ <div class="box"><b>Existing local app</b>Scrapes fixtures, lineups and prices; keeps the model code.</div>
  <div class="arrow">&rarr;</div>
  <div class="box"><b>Loader</b>Copies the results into S3 after each round.</div>
  <div class="arrow">&rarr;</div>
@@ -82,7 +84,7 @@ code{background:#e7edf6;border-radius:3px;padding:0 3px;font-size:9.8px}
 
 <div class="bottom">
  <div class="card"><h3>Security</h3><ul><li>Coach A cannot read Coach B's squads or preferences</li><li>The coach's identity comes from the token, never from the AI</li><li>No passwords or keys in code or notes</li></ul></div>
- <div class="card"><h3>Trust</h3><ul><li>Projections are fixed numbers read from storage, the same every time</li><li>The AI explains; it does not change the numbers</li><li>Expert views are shown with source and date, beside the numbers</li></ul></div>
+ <div class="card"><h3>Trust</h3><ul><li>One projected score per player, shared by every coach and the same every time</li><li>The AI explains; it does not change the numbers</li><li>Expert views are shown with source and date, beside the numbers</li></ul></div>
  <div class="card"><h3>Cost</h3><ul><li>Runs inside the free-tier account and credits (about $158 on 2026-10-10)</li><li>Budget alarm before first use</li><li>Cost measured after the build, by service and by use (counts of calls)</li></ul></div>
  <div class="card"><h3>Not in this version</h3><ul><li>Keeper and Dynasty drafts</li><li>Logging in to the games or making trades</li><li>Daily fantasy (DFS)</li></ul></div>
 </div>
