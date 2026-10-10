@@ -16,6 +16,7 @@ ever touching the data directly. Secondary goal: build real expertise in Bedrock
 | [05_POC_PLAN.md](05_POC_PLAN.md) | **Start here:** the small identity/A-vs-B proof-of-concept, with trace points and stages |
 | [06_LINKEDIN_SERIES.md](06_LINKEDIN_SERIES.md) | LinkedIn post plan + Post 3 skeleton |
 | [08_APP_REQUIREMENTS.md](08_APP_REQUIREMENTS.md) | **The real AWS app (draft v0.1):** two products (team builder + weekly trades, draft planner), users, data, security, Runtime decision, reuse table, source layout (port 5174), cost plan, open questions |
+| [09_PHASE1_PLAN.md](09_PHASE1_PLAN.md) | **Phase 1:** stabilise and evaluate the projection model (established players and draftees), run it on AWS, freeze by 20 February 2027; work packages with gates, recommendations, open questions |
 | [diagrams/architecture_app_v0.1.pdf](diagrams/architecture_app_v0.1.pdf) | One-page sponsor-style architecture of the AWS app (source HTML alongside) |
 | [notes/01_CONCEPTS.md](notes/01_CONCEPTS.md) | **Study notes, read in order:** concepts and where each lives in your project |
 | [notes/02_HOW_WE_TESTED.md](notes/02_HOW_WE_TESTED.md) | The testing method, the 11 experiments, and what I got wrong |

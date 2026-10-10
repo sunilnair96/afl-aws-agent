@@ -49,12 +49,22 @@ Window: the free-tier account lasts 6 months or until the credits are used (abou
 | FR8 | Draft plan: rank by position scaled to league size (value over replacement) [assumed], pick plan for the user's slot, a simple "what if I pick a ruck first" comparison [assumed]. |
 | FR9 | Rules (caps, squad shape, trade limits) come from config, never hard-coded; they change by season. |
 | FR10 | Every tool call is logged (tool, arguments, allowed or denied) for debugging and cost counts. |
-| FR15 | **Special-player overrides on the season projection (decided 2026-10-10).** Players can be flagged **special** (injury return, few games, role or club change, an outlier season). For a special player the developer sets either a **fixed value** (or a range, whose midpoint is used) or a **method with a parameter**, such as "average after dropping the N lowest games". Each override stores the method, the parameter, the resulting value, the raw average beside it, a note, who edited it and when. Pressing **Project** applies the overrides and **rewrites the season projection file in place**; no copies of the file are kept. Every edit is appended to a small **audit log** (who, when, old value, new value, method), so history exists without versions of the file. This can be repeated until the projection is accepted. The same file serves every user. |
-| FR16 | **Overrides are not per user.** Only the developer edits projections and special flags; users A and B cannot. Per-user data stays as it is: age cap, avoid list, locks, squads, versions, league settings. |
+| FR15 | **Special rules are config, not hand edits (changed 2026-10-10).** The projected score is final once built: **prediction model output plus special rules driven by config**, each rule a formula or a fixed value, for example *returning from injury: 80%*, *fixed value 65*, *average after dropping the N lowest games*. A rules file lists player, rule, value and a reason, in the same style as the local app's shortlist exceptions file. Only the developer changes it. Pressing **Project** applies the rules and rewrites the single season projection file in place; every change to the rules file or the file is appended to an audit log. **Rule schema (generic; the 80% example is only one instance):** `player`, `rule_type` (`fixed`, `factor`, `range_midpoint`, `drop_lowest_n`, `cap`, `floor`), `base` for factors (`model`, `last_season_avg`, `best_avg_last_2_seasons`), `value`, `applies_from_round`, `applies_to_round`, `reason`, `added_on`. New rule types are added in code once, then used from config. |
+| FR16 | **Users do not touch projections.** Users A and B only choose which players to **lock**, **add to their shortlist** and **exclude**. Age cap, avoid list, locks, squads, versions and league settings stay per user. |
 | FR17 | ~~Price discount per special player~~ **Not an app feature (owner, 2026-10-10).** The real player list and prices will be loaded, so the app never calculates discounts. A discount field exists **only in the test-data generator's assumptions file**, to fake a price for test purposes. |
-| FR20 | **Projection is the core function** (section 4b): one **projection file per season**, kept in place, with both AFL Fantasy and SuperCoach scores for every player; one projected score per player shared by all users. |
+| FR20 | **Projection is the core function** (section 4b): one **projection file per season**, kept in place, with both AFL Fantasy and SuperCoach scores for every player; one projected score per player shared by all users; **final** once frozen (FR25). |
 | FR23 | **Opponent handling.** Pre-season there is no fixture, so the season projection is **fixture-independent** (an average over all opponents, as the local `season_projection.py` already does). Once a fixture exists, the app projects each player against the **upcoming fixture for the next 3 or 4 rounds** (config: `rounds_ahead`), as SuperCoach shows. Round projections are rows in the same season file (see 4b), recomputed in place after each round or fixture change. Pre-season squads use the fixture-independent projection; the trade advisor uses the next rounds. |
-| FR24 | **Overrides and rounds.** A special player's override sets the fixture-independent value; each round value is that override scaled by the model's own round-to-base ratio for that player. [assumed, to confirm] |
+| FR24 | ~~Overrides scaled by round ratio~~ **Replaced:** the projection is final. Rules (FR15) are applied to the model output the same way for the base and for each round: a fixed value replaces it; a factor multiplies it; a method (for example drop-lowest-N) changes the input average. No per-round scaling logic. |
+| FR25 | **Projection lifecycle:** **Draft** (iterate: model, rules, Project, review, repeat) then **Frozen**. **The projected score is final by the one pre-season practice match in the last week of February 2027** (working date 20 February); after that only injuries change it (owner, 2026-10-10). The AFL player list is finalised by 30 November 2026; AFL Fantasy and SuperCoach release their lists in early January; real pre-season news starts about 5 January. A frozen file records its freeze time and hash; changing it needs an explicit unfreeze with a logged reason. Not a copy of the file. |
+| FR26 | **New players with no history** (draftees such as Cody Walker): the projection uses the **draft dossier** and **how previous draftees performed** (by pick band and position), as a stated method in config. More draft classes improve it; only one class (the 2025 draft, 2026 season) has been looked at so far. |
+| FR27 | **After the freeze (from 20 February), only injuries change a projected score** (see 4e). The model is not re-run after each round's results. [to confirm: the 3 to 4 round look-ahead rows against the fixture are still produced from the frozen scores; see `09_PHASE1_PLAN.md` open question 1] |
+| FR28 | **Projection acceptance tests (trajectory pairs):** projections must order known young-rising and old-declining players correctly. Pairs: Daicos vs Neale, Sheezel vs Parker, Jackson vs Gawn. See section 4c for the current result. |
+| FR29 | **Evaluation set for the production projection** (section 4d): a fixed, versioned set of tests run on every change to the model or rules. It has three levels: aggregate hold-out metrics, labelled named cases, and trajectory pairs. |
+| FR30 | **Known structural breaks are configurable.** A rule change that shifts a group's scoring (2026: rucks scored less than in 2025; owner, 2026-10-10) is declared in config (season, group, treatment: exclude from training, indicator, or correction factor), applied by the model, and reported in the evaluation. The data shows established rucks changing -8.7 AF (-7.0 SC) from 2025 to 2026 against about 0 in earlier years. |
+| FR31 | **Shortlist attributes (decided 2026-10-10; built first in the local app).** Each shortlisted player can carry a **Role** (DEF, MID, RUC, FWD: the position he is used in), a **Band** and **Tags**, **per competition** (AF and SC are separate). Choices come from fixed lists in config, never free text. A Band is entered only where the owner wants to override the model's projected average; a blank Band means the model's projection. |
+| FR32 | **Band ladder.** One ladder for both games: 30-40, 40-50, 50-60, 60-70, 70-80, 80-90, 90-100, then steps of 5: 100-105, 105-110, 110-115, 115-120, 120-125, 125+. A band's number is its **lowest edge** (50-60 is 50; 125+ is 125). The ladder lives in config. The low bands let rookies whose score cannot be projected be added. A banded player is shortlisted with that number as his projected score (config: `band_implies_inclusion`); a banded player with no projection row (a rookie) is added from the player master. |
+| FR33 | **Tags are information only.** A player can have several (for example #Gun, #Great Junior Scores, #Past his Peak, #Target). No scoring, shortlisting or squad logic may read them; a test guards that. They are context for the agent. The existing rule-based **Type** (Emerging, Established, Returning, Other) is left as it is, because the shortlist rules use it (Emerging players need a smaller projected gain). |
+| FR34 | **Shortlist screen shows (owner's wish list).** Now buildable: for established stars the number of games scoring over 100 and over 120 (SuperCoach thresholds to confirm), and for new players the draft-profile information. **Later, once the fixture and player list exist:** each player's projected score for the next 5 rounds with the opponents. |
 | FR21 | **Shortlist before Build Squad.** For AFL Fantasy and SuperCoach, Build Squad chooses only from the shortlist plus the user's locks (about 50 to 60 players of interest, not the whole list). Build Squad refuses with a clear message if no current shortlist exists. |
 | FR22 | **Draft planner projection:** about 300 players, sized by squad size and league size (a bigger league needs a deeper projection). |
 | FR11 | **Build Squad:** the user presses Build Squad; the optimiser runs against the user's locks, avoid list and the current season projection, and can be re-run after any edit. Two steps, as in the local app: a fast, rerunnable *build* that never saves, then an explicit *save*. Never auto-save. On save the app asks: **save as a new version / overwrite the active version / discard**. |
@@ -93,6 +103,57 @@ Window: the free-tier account lasts 6 months or until the credits are used (abou
 **Staleness rule:** the file carries an `updated_at` timestamp and a content hash. A shortlist records the hash it was built from, and a squad version records the hash plus the projected score used for every player. If the file changes after a shortlist was built, the shortlist is marked stale and Build Squad warns the user. A saved squad version stays explainable because it holds its own scores, even though the older file is gone.
 
 **Where projection runs.** Recommended: in AWS as a batch job triggered from the app, with the cheap "Project" step separate from the heavy base-projection step. The local app's 4.5-minute `--rebuild` and its cache are the model for that split. The compute choice (Lambda container image or a container task, with a Step Functions workflow) is **[verify]**: the model libraries and run time have not been tested on AWS.
+
+## 4c. Projection check: the trajectory pairs (observed 2026-10-10, from the existing 2027 projection files; not re-run)
+
+AF change from 2026 average to projected 2027 (SC in brackets): **Daicos −10.5 (−6.8)** vs **Neale −12.4 (−12.9)**; **Sheezel −7.6 (−11.1)** vs **Parker −7.0 (−9.8)**; **Jackson −4.0 (−6.3)** vs **Gawn −8.6 (−12.9)**.
+
+- **Relative test** (the young player should fall less than the old one): 2 of 3 pairs pass in both AF and SC. **Sheezel vs Parker fails** in both.
+- **Absolute test** (the rising player should be projected to rise): **0 of 3 pass.** All six are projected to decline from 2026, the young ones less. This looks like regression to the mean after outlier seasons (the model's season-level calibration is trained on real year-to-year changes); that is my reading, not a confirmed cause.
+- **Consequence for the shortlist:** the 2027 shortlist rule requires projected improvement of at least +5 (+2 for emerging players). **Daicos, Sheezel and Jackson are all excluded by it.** Since Build Squad chooses from the shortlist plus locks (FR21), premium players only enter a squad as **locks**. That matches the local design, and it is why locks matter.
+- **Returning players** (Tom Green, Nicholas Martin) have no 2026 average; the model projects AF 88.7 and 85.1 (SC 88.6 and 80.5). The 80% rule needs a defined base (see Q14).
+
+
+## 4d. Projection evaluation set (decided 2026-10-10)
+
+The 2026 actual scores are the answer key. Three levels:
+
+1. **Aggregate hold-out** (exists in the local app, `PRESEASON_2027_PLAN.md`): project 2026 from data up to 2025, compare with actual 2026 averages for 500 players. Current numbers: AF **MAE 7.95**, Spearman 0.81, top-20 hit 13; SC MAE 8.51, Spearman 0.80, top-20 hit 13. The naive "last season's average" scores 9.78 and 10.69. These become the **pass bar**: a change must not make MAE worse by more than a set tolerance [to agree].
+2. **Labelled named cases** (reported, **not pass/fail**: "established players the model should predict, not necessarily correctly"). Categories and players supplied by the owner; actual averages are from the local 2026 data (AF, home-and-away):
+
+| Category | Player | 2025 | 2026 | Note |
+|---|---|---|---|---|
+| New club | Deven Robertson | 15.5 (4 g) | 73.5 (4 g) | Moved to West Coast; scored more, then injured; only 4 games each year |
+| Age decline | Scott Pendlebury (38) | 86.5 | 79.2 | |
+| Age decline | Steele Sidebottom (35) | 86.0 | 63.0 | Largest drop in the group |
+| Rookie, no history, strong draft profile | Jagga Smith | none | 82.0 (23 g) | Missed 2025 injured |
+| Exception, lock from pre-season news | Lachlan McAndrew | none | 85.2 (22 g) | |
+| Draftees | Dyson Sharp, Patrick Retschko, Josh Lindsay, Jacob Farrow | none | 70.9, 71.1, 65.9, 71.9 | Retschko spelling as matched in the data |
+| Mature-age recruits | Marcus Herbert, Joel Fitzgerald | none | 76.2, 75.0 (10 g each) | |
+| Established | Bailey Smith 116.3 to 118.2; Daicos 108.1 to 116.7; Sheezel 109.2 to 116.2; Dawson 110.2 to 112.9; Gulden 102.3 to 112.5 (11 g, injured); Gawn 113.3 to 110.0; Ashcroft 95.3 to 107.1; Butters 99.8 to 104.5; Jackson 94.8 to 102.8; Bontempelli 111.3 to 102.5; **Zachary Merrett** 102.8 to 104.1 | | | The data stores him as "Zachary Merrett", not "Zach Merrett". The evaluation set, the draft order and the test-data assumptions must use the data's name, or a name alias (the local alias file has no entry for him) |
+
+3. **Trajectory pairs** (relative order): Daicos vs Neale, Sheezel vs Parker, Jackson vs Gawn (results in 4c).
+
+**Draftee check against 2026:** the 2026 draftees above averaged 65.9 to 71.9 (Sharp pick 13, Farrow pick 10, Lindsay pick 19). Rookie projection (FR26) is tested against these.
+
+## 4e. Injury list handling (decided 2026-10-10)
+
+| AFL injury list status | Projection | Squad list |
+|---|---|---|
+| **Indefinite** | **0 for all future rounds** until the status changes | Flagged |
+| **Test** | **Unchanged** | **Highlighted in the user's squad list** so the user is aware |
+| A stated return time (weeks) | 0 until the expected return round [assumed] | Flagged |
+| Season | 0 for the rest of the season [assumed] | Flagged |
+
+The developer loads the list after each round (source and terms of use to confirm, Q17).
+
+## 4f. What the data says about age (checked 2026-10-10, local match data, home-and-away, players with 10+ games in both seasons)
+
+- **Age in the training data is the age on that season's roster, not today's age.** `build_player_match_dataset.py` states that Age is "a once-a-season roster snapshot": footywire has no per-match age. A 2022 row carries the 2022 roster age (Sam Walsh: 21 in 2022). For next season, the stub row advances age by the number of years since the player's last season. Open point: the exact roster pull date (age near a birthday could be off by one year) [verify].
+- **Mean change in AF average to the next season, by age in the current season:** +5.4 at 18, +3.7 at 21, +3.0 at 22, +0.6 at 23, +1.5 at 24, **-0.8 at 25, 0.0 at 26**, -1.8 at 27, -2.1 at 28, -2.9 at 29, about -2 to -5 from 30. So the data shows improvement to about 24, a **plateau around 24 to 26, and decline from 27**; it does not show a flat peak until 29. The engineer-features docstring says "peak at 29", which looks like a different measure (the age at which the average is highest, not the change). Survivors only (10+ games both years), so declines are probably understated.
+- **Sam Walsh (AF average, games):** 103.3 (20) in 2022, 94.6 (15) in 2023, 106.1 (19) in 2024, 93.1 (14) in 2025, 98.4 (23) in 2026. Matches the owner's figures; a good test of injury-affected seasons.
+- **Lachie Neale:** 107.0, 97.0, 101.0, 94.6, then **102.2 at age 32** (+7.6): the kind of exception the owner expects the model to mis-handle.
+
 
 ## 4a. Season lifecycle (new, 2026-10-10)
 
@@ -264,10 +325,16 @@ Keeper and Dynasty leagues; DFS; logging into AFL Fantasy or SuperCoach; executi
 | D5 | Draftees: dossier ranks 1 and 2 are Cochrane (pick 1, Port Adelaide) and Walker (pick 2, Carlton); both are locks. Clubs from the supplied 20-pick order. |
 | D6 | Fixed facts that change data (team moves) go in the assumptions overlay; **opinions go in the knowledge base, not code** (see 13c). |
 | D7 | Key-position exclusions are the user's own avoid-list entries with a reason tag; the app does not infer them. |
-| D8 | No deterministic rule per player. Instead: a **special flag** plus a manual override (fixed value, range or a method such as "drop the N lowest games"), then **Project** rewrites the single season projection file in place; the team builder builds from it. Developer-only, shared by all users (FR15, FR16). |
+| D8 | The projected score is final: **model output plus special rules from config** (fixed value, factor or method), applied by **Project**, which rewrites the single season file in place. Users cannot edit it. Draft, then Frozen (FR25). Supersedes the earlier hand-edit design (FR15, FR16). |
 | D9 | Test team moves for 2027 (overlay): Butters to Western Bulldogs, Merrett to Hawthorn, O'Driscoll to Richmond, Rowan Marshall to Geelong, Sam Marshall to St Kilda, **Ben King to Hawthorn**. Ben King is a key-position player and is not considered, so he goes on the avoid list with reason `Key Position` (both test users). |
 | D11 | 2027 has a Round 0. Test runs use the 2026 fixture as a stand-in (flagged test). The Round 0 team exclusion is config-driven. |
 | D10 | Sam Marshall: 2 games in 2026 (AF 34 and 78, average 56.0), a **21% price discount**, projected at **60 to 70** (manual override). O'Driscoll: 17 games, AF average 64.1; the owner may drop his 5 lowest scores and recalculate (that gives 71.2 over 12 games). |
+| D12 | Users A and B choose only locks, shortlist additions and exclusions. |
+| D13 | In season, projections are refreshed after each round with the AFL injury list (injured = 0 until expected return). New data source and process: FR27. |
+| D14 | New players are projected from the draft dossier and previous draftees' results (FR26). |
+| D15 | Band number = lowest edge of the band; one ladder for both games; each player has his own band per game (owner, 2026-10-10). |
+| D16 | Type stays rule-derived and unchanged; new **Tags** field is information only (D15 and FR33). |
+| D17 | Role, Band and Tags are stored per competition in `02_Data/masterData/shortlist_attributes_{season}_{AF|SC}.csv` (config `file_pattern`), separate from the include and exclude exceptions file. |
 
 ### 13b. Open: needs your answer
 
@@ -285,6 +352,11 @@ Keeper and Dynasty leagues; DFS; logging into AFL Fantasy or SuperCoach; executi
 | Q11 | ~~Restrict candidates to the shortlist?~~ **Decided:** yes, Build Squad uses the shortlist plus locks; the shortlist is a prerequisite (FR21). | |
 | Q12 | ~~Lock score~~ **Decided:** the projected score is common to all users; locks are per user and take the value from the season projection (section 4b). | |
 | Q13 | ~~Round 0 in 2027?~~ **Answered:** yes, teams unknown until the fixture is published. The exclusion of Round 0 teams from the starting squad is a config flag; the team list comes from the fixture's Round 0 matches (test: the 2026 fixture). Until a real fixture exists the app shows a warning that Round 0 teams are unknown. | |
+| Q14 | ~~80% rule~~ **Answered:** it was an example. The requirement is a **generic rule schema in config** (FR15). Which rule types do you need first beyond fixed, factor and drop-lowest-N? | The set in FR15 |
+| Q15 | ~~Relative or absolute test~~ **Answered:** three-level evaluation set (4d): aggregate hold-out is the pass bar; named cases are reported; pairs check relative order. Tolerance for the aggregate bar: how much worse than MAE 7.95 (AF) is acceptable? | 0.3 |
+| Q16 | Users "select the players to lock, shortlist or exclude": is the shortlist **shared and rule-built** with each user able to add or remove players, or **entirely chosen by each user**? | Shared rule-built list plus per-user additions and exclusions |
+| Q17 | **AFL injury list** source and terms: is the official AFL injury page the source, and may it be loaded by the developer after each round? (Status handling is decided: 4e.) | Official page, developer loads |
+| Q18 | Freeze point: when do you consider the pre-season projection final (before the January player list, after it, after Round 0)? | After the January player list, before building the starting squads; refreshed after Round 0 |
 | Q10 | How the app learns each user's squad (see the clarification below). Are versions unlimited, each a full snapshot with its locks and avoid list? | Built in the app; unlimited full snapshots |
 
 ### 13b-2. How the local Build Squad works (read 2026-10-10, `team_builder.py`)
@@ -307,7 +379,7 @@ Yes: the squad means each user's squad for AFL Fantasy and for SuperCoach. Three
 
 - Can the base projection (trained model plus season projection) run on AWS: libraries, size, run time? Which compute?
 - How does the "Project" button trigger it and report progress (an asynchronous job)?
-- Where do the season projection file, audit log, shortlists and config files live (S3 files plus an index in DynamoDB)? How is S3 versioning kept off for the projection prefix?
+- Where do the season projection file, audit log, shortlists and config files live (S3 files plus an index in DynamoDB)? S3 versioning is **not enabled** on the bucket (verified 2026-10-10: `get-bucket-versioning` returned nothing, which means it has never been switched on), so overwriting the projection file keeps no old copies. Do not enable bucket versioning without excluding this prefix.
 
 ### 13c. Knowledge base (not code)
 
