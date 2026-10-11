@@ -90,7 +90,7 @@ SuperCoach evidence thresholds (110/130 assumed); how the 80% "returning" rule i
 
 ## 10. Documents
 
-`08_APP_REQUIREMENTS.md` (requirements, decisions, open questions) · `09_PHASE1_PLAN.md` (evaluation, findings, work packages, build slices) · `notes/08_SAGEMAKER_NOTES.md` · `notes/09_FIND_PLAYERS_BUILD_LOG.md` and `notes/10_RUN_SQL_BUILD_LOG.md` (quickHarness search tools: find_players and read-only run_sql, harness version 6; both deployed, not yet committed for run_sql) · `notes/` 01 to 07 (concepts, how we tested, lessons, harness vs Runtime, PKCE, environments) · `diagrams/architecture_app_v0.1.pdf` (sponsor view) · `LnPosts/` (posts; `HarnessVsRuntimePost_draft.txt` and `LessonsPost_draft.txt` are unposted drafts) · `poc/TRACE_LOG.md` (every observation) · and in the app repo's journal `00_Planning/EXECUTION_PLAN.md` (dated entries).
+`08_APP_REQUIREMENTS.md` (requirements, decisions, open questions) · `09_PHASE1_PLAN.md` (evaluation, findings, work packages, build slices) · `notes/08_SAGEMAKER_NOTES.md` · `notes/09_FIND_PLAYERS_BUILD_LOG.md` and `notes/10_RUN_SQL_BUILD_LOG.md` (quickHarness search tools: find_players and read-only run_sql, harness version 7; both deployed, not yet committed for run_sql) · `notes/` 01 to 07 (concepts, how we tested, lessons, harness vs Runtime, PKCE, environments) · `diagrams/architecture_app_v0.1.pdf` (sponsor view) · `LnPosts/` (posts; `HarnessVsRuntimePost_draft.txt` and `LessonsPost_draft.txt` are unposted drafts) · `poc/TRACE_LOG.md` (every observation) · and in the app repo's journal `00_Planning/EXECUTION_PLAN.md` (dated entries).
 
 ## 11. Working rules (from the owner)
 

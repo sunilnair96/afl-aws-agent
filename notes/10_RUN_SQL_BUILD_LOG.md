@@ -18,7 +18,7 @@ The harness answered "players aged under 28 who averaged over 100 in 2024, 2025 
 | New gateway target `RunSqlTargetIAM` (id `QBWBWS73MY`) | `AFLHarness/agentcore/agentcore.json` |
 | Routing instructions | `AFLHarness/app/quickHarness/system-prompt.md` and `harness.json` |
 
-AWS resources created: Athena workgroup `afl-readonly-sql` (output location enforced, **10 MB scanned-per-query cap**; the whole data set is under 1 MB), IAM role `afl-run-sql-role` (+ inline `RunSqlAthena`, AWSLambdaBasicExecutionRole), Lambda `afl-run-sql` (python3.12, 256 MB, 60 s). quickHarness is now **version 6**; clientToolHarness untouched (version 1).
+AWS resources created: Athena workgroup `afl-readonly-sql` (output location enforced, **10 MB scanned-per-query cap**; the whole data set is under 1 MB), IAM role `afl-run-sql-role` (+ inline `RunSqlAthena`, AWSLambdaBasicExecutionRole), Lambda `afl-run-sql` (python3.12, 256 MB, 60 s). quickHarness is now **version 7**; clientToolHarness untouched (version 1).
 
 ## 3. Safety (in layers; IAM is the one that matters)
 
@@ -45,6 +45,7 @@ Harness tests (version 6), tool chosen and answer vs local ground truth:
 
 - **Version 4: the model ignored run_sql** (Haiku 4.5 used find_players and merged by eye, and even listed a 28-year-old as "under 28"). The tool was visible (listed by the harness); the soft instruction was not enough. Version 5 made the routing a MUST with an example query: both test questions then went to run_sql.
 - **Version 5: wrong sub-count (11, truth 13).** Two separate causes: the model wrote `GROUP BY player, team, age` (age changes mid-season, which splits a player into two rows), and it counted "aged 23 or under" by eye from a 56-row list. Version 6: tool description and instructions say never group by age (use `MAX(age)`) and compute every count inside the query. Result then correct (56 and 13).
+- **Version 6: games played came back as 1 for every player.** The model's SQL used `COUNT(DISTINCT CASE WHEN ... THEN 1 END)`, which counts distinct values of the constant 1 (so at most 1). The model noticed and flagged it but did not fix it. Version 7: tool description and instructions say count games with `COUNT(*)` or `COUNT(CASE WHEN ... THEN 1 END)`, never `COUNT(DISTINCT 1)`, and to fix and rerun a query whose count looks wrong. Rerun: Gulden 23/10/11, Sheezel 21/23/22, Daicos 23/23/22 (same as the correct earlier run).
 - Lesson: a tool makes the right answer possible, but the model must be told when it is mandatory and how to avoid known traps. Only a counted test set shows whether it works.
 - The workgroup cap is a safety net only; real protection is IAM.
 - Data quirk found: the `age` column can change within a season (birthdays). `find_players` uses `MAX(age)`, which is consistent.
