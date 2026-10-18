@@ -22,6 +22,7 @@ ever touching the data directly. Secondary goal: build real expertise in Bedrock
 | [notes/01_CONCEPTS.md](notes/01_CONCEPTS.md) | **Study notes, read in order:** concepts and where each lives in your project |
 | [notes/02_HOW_WE_TESTED.md](notes/02_HOW_WE_TESTED.md) | The testing method, the 11 experiments, and what I got wrong |
 | [notes/03_KEY_LESSONS_AND_READING.md](notes/03_KEY_LESSONS_AND_READING.md) | Ten lessons, self-test questions, exercises, reading list with links |
+| [notes/11_LAB8_HARNESS_WORKSHOP_NOTES.md](notes/11_LAB8_HARNESS_WORKSHOP_NOTES.md) | AWS workshop Lab 8 (zero-code harness), read not run: the commands, gotchas the lab states (IAM default outbound, OAuth for a JWT Gateway, per-session files, `--exec`, `--model-id`, inline functions), comparison with our setup, ideas |
 | [notes/08_SAGEMAKER_NOTES.md](notes/08_SAGEMAKER_NOTES.md) | SageMaker notes: what it is, what would run there, what is required, will the result differ (same code and versions: same; built-in algorithms: different by design), options, parity test plan, cost and free-tier facts with sources |
 | [notes/07_HARNESS_EXPERIMENT_PLAN.md](notes/07_HARNESS_EXPERIMENT_PLAN.md) | Planned (not run): rebuild the same function with a harness, measure time/effort/visibility/access control; what AWS docs say about harness → Gateway auth |
 | [notes/06_ENVIRONMENTS_AND_DEPLOYMENT.md](notes/06_ENVIRONMENTS_AND_DEPLOYMENT.md) | DEV→PRD with AgentCore targets: what we tried, 12 findings, the target pipeline and per-environment config, my mistakes, open tests |
