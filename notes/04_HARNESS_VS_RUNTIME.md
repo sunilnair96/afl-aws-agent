@@ -45,6 +45,46 @@ Same function built three ways. The access-control row is the one that decides.
 
 **Flaws found in the first draft of this conclusion:** where the app runs does not change the harness benefit (it runs in AWS either way); the lock-in is mostly the Gateway/Cedar/Cognito ties, which exist in both designs; changing the model is also a one-line change on Runtime (the harness saves the redeploy); AWS's own page lists inline tools as "your code" but does not say that this is the route to per-user access control: that is our observation.
 
+## Part 1c: can the harness pass the user's identity to the Gateway? (2026-10-19, from AWS material, not tested by us)
+
+**Short answer.** No. A harness can authenticate its callers at its own door, but towards a JWT Gateway it presents a
+**machine token**, not the user's. The Gateway and Cedar therefore see the app, never the person. Per-user rules must be
+enforced by the application (or by a Runtime agent that forwards the user's token).
+
+**Evidence, in the order we met it**
+1. AWS sample `awslabs/agentcore-samples`, `01-features/01-harness/01-advanced-examples/07-oauth` (README read, scripts not run):
+   - inbound: the harness has a `CUSTOM_JWT` authorizer on a Cognito user pool, so an invalid caller token is a 401 before the agent runs;
+   - outbound: `outboundAuth.oauth` makes the harness fetch a machine-to-machine token (`client_credentials`) from a **second** Cognito pool on every tool call; the Gateway checks that token's client and scopes, then the Lambda runs;
+   - the README does not say the user's token is forwarded and shows no way for a tool or policy to learn which user called.
+2. An AWS lab (name not recorded; text pasted by Sunil) says it outright: in the Runtime lab the agent authenticated to the `CUSTOM_JWT` Gateway by
+   forwarding the caller's Cognito bearer token (token passthrough); "the zero-code harness has no inbound user token to forward, so it must obtain
+   its own Cognito token using a machine-to-machine (client_credentials) OAuth credential provider", configured as the gateway tool's outbound auth.
+3. The lab also says that if you skip the outbound auth, `agentcore add tool --type agentcore_gateway` defaults to **IAM (SigV4)**, which a JWT Gateway
+   rejects: the harness then fails at invoke time with `Failed to load tool ... 401 Unauthorized` on the gateway `/mcp` endpoint.
+
+**How the machine-token wiring works (the chain, for when it is needed)**
+1. A **machine app client** in Cognito: client-credentials grant, with a resource server and a scope.
+2. A **credential provider** in the AgentCore token vault (`oauth2credentialprovider/<name>`) that holds that client's ID and secret, so the harness
+   configuration itself contains **no secret**. Its ARN is predictable: `arn:aws:bedrock-agentcore:<region>:<account>:token-vault/default/oauth2credentialprovider/<name>`.
+3. The harness tool points at the provider and the scope:
+   `agentcore add tool --harness <harness> --type agentcore_gateway --name <tool> --gateway-arn <arn> --outbound-auth oauth --provider-arn <provider arn> --scopes <scope> --grant-type CLIENT_CREDENTIALS`
+4. The JWT Gateway validates the machine token (`allowedClients` / scopes) and Cedar decides for the **machine principal**.
+   Read the client secret only into a variable (never print it, never put it in chat, git or screenshots).
+
+**What this means for our design**
+- Our harness uses the IAM Gateway `AFLGatewayIAM` (SigV4), so it never needed a machine client or a credential provider. That is the correct pairing:
+  IAM gateway for the harness, JWT + Cedar gateway for the Runtime path.
+- **Prediction (not tested):** pointing our harness at our JWT Gateway would be denied everything by Cedar's default deny, because our policies are written for
+  a human user (`cognito:groups` tag; `sub` equal to the `user_id` argument), while a machine token has no groups and its `sub` is the client ID. It would need
+  a policy for the machine principal, and that policy could not tell users A and B apart.
+- So the earlier wording "we did not find any way to forward the user's token" (TRACE_LOG) is now backed by AWS's own statement. It is a statement about the
+  harness as it is today; re-check if the harness gains a token-forwarding option.
+- The Part 2 hypothesis row "Per-user identity handling, custom checks, token forwarding: lean towards Runtime" still stands, now with this evidence.
+
+**If we ever want to try it** (a learning exercise, not part of the AFL app): in a separate folder with its own project name, add a machine client with a scope
+to a Cognito pool, create the credential provider, add the tool as above, and add a Cedar policy for the machine principal. Do not touch the existing pool,
+Gateway or policies.
+
 ## Correction: where the idle costs actually come from (checked 2026-10-09)
 
 - The customer-managed KMS key `<KMS_KEY_ID>` belongs to the **`CDKToolkit` stack** (`FileAssetsBucketEncryptionKey`): the CDK bootstrap key for the bucket `agentcore deploy` uploads code to. It has no grants or tags and was created on the first deploy (bootstrap). **It is not the harness's**, and removing the harness did not remove it. Deleting it would break deploys. Cost is roughly $1/month **[general KMS pricing, not checked today]**.
